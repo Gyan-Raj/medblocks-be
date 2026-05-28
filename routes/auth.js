@@ -9,7 +9,6 @@ const {
 
 const router = express.Router();
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 const issueTokenCookie = (res, user) => {
   const token = jwt.sign(
     { id: user._id, name: user.name, email: user.email, avatar: user.avatar },
@@ -18,14 +17,13 @@ const issueTokenCookie = (res, user) => {
   );
 
   res.cookie("token", token, {
-    httpOnly: true, // JS cannot read it — XSS-safe
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    httpOnly: true,
+    secure: true, // required for SameSite: None
+    sameSite: "none", // allows cross-site (Vercel ↔ Render)
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 };
 
-// ── Google ────────────────────────────────────────────────────────────────────
 router.get(
   "/google",
   passport.authenticate("google", {
@@ -37,7 +35,7 @@ router.get(
 router.get(
   "/google/callback",
   passport.authenticate("google", {
-    failureRedirect: `${FRONTEND_URL}/login`,
+    failureRedirect: `${FRONTEND_URL}/login?error=google_failed`,
     session: false,
   }),
   (req, res) => {
@@ -46,7 +44,6 @@ router.get(
   },
 );
 
-// ── GitHub ────────────────────────────────────────────────────────────────────
 router.get(
   "/github",
   passport.authenticate("github", { scope: ["user:email"], session: false }),
@@ -55,7 +52,7 @@ router.get(
 router.get(
   "/github/callback",
   passport.authenticate("github", {
-    failureRedirect: `${FRONTEND_URL}/login`,
+    failureRedirect: `${FRONTEND_URL}/login?error=github_failed`,
     session: false,
   }),
   (req, res) => {
@@ -64,7 +61,6 @@ router.get(
   },
 );
 
-// ── Me (verify token) ─────────────────────────────────────────────────────────
 router.get("/me", (req, res) => {
   const token = req.cookies?.token;
   if (!token) return res.status(401).json({ error: "Not authenticated" });
@@ -77,9 +73,12 @@ router.get("/me", (req, res) => {
   }
 });
 
-// ── Logout ────────────────────────────────────────────────────────────────────
 router.post("/logout", (_req, res) => {
-  res.clearCookie("token", { httpOnly: true, sameSite: "lax" });
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none", // must match the original Set-Cookie attributes
+  });
   res.json({ message: "Logged out" });
 });
 
