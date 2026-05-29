@@ -7,6 +7,8 @@ const {
   JWT_EXPIRES_IN,
   FRONTEND_URL,
 } = require("../env.constants");
+const bcrypt = require("bcrypt");
+const User = require("../models/User");
 
 const router = express.Router();
 
@@ -61,6 +63,72 @@ router.get(
     res.redirect(`${FRONTEND_URL}/dashboard`);
   },
 );
+
+router.post("/signup", async (req, res) => {
+  const { name, email, password } = req.body;
+
+  if (!name || !email || !password) {
+    return res
+      .status(400)
+      .json({ error: "Name, email and password are required" });
+  }
+
+  if (password.length < 8) {
+    return res
+      .status(400)
+      .json({ error: "Password must be at least 8 characters" });
+  }
+
+  try {
+    const existing = await User.findOne({ email, provider: "local" });
+    if (existing) {
+      return res
+        .status(409)
+        .json({ error: "An account with this email already exists" });
+    }
+
+    const hashed = await bcrypt.hash(password, 12);
+
+    const user = await User.create({
+      provider: "local",
+      name,
+      email,
+      password: hashed,
+      avatar: null, // frontend renders initials instead
+    });
+
+    issueTokenCookie(res, user);
+    res.status(201).json({ message: "Account created" });
+  } catch (err) {
+    res.status(500).json({ error: "Signup failed" });
+  }
+});
+
+// ── Local Login ───────────────────────────────────────────────────────────────
+router.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: "Email and password are required" });
+  }
+
+  try {
+    const user = await User.findOne({ email, provider: "local" });
+    if (!user) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    issueTokenCookie(res, user);
+    res.json({ message: "Logged in" });
+  } catch (err) {
+    res.status(500).json({ error: "Login failed" });
+  }
+});
 
 router.get("/me", (req, res) => {
   const token = req.cookies?.token;

@@ -43,7 +43,7 @@ Create a `.env` file in the root:
 ```env
 PORT=5000
 FRONTEND_ALLOWED_ORIGINS=http://localhost:3000
-DB_CONNECTION_STRING=mongodb://localhost:27017/oauth_app
+DB_CONNECTION_STRING=mongodb://localhost:27017/medblocks
 
 # Google OAuth — https://console.cloud.google.com
 GOOGLE_CLIENT_ID=your_google_client_id
@@ -109,6 +109,8 @@ Server will start at http://localhost:5000.
 | GET    | `/auth/google/callback` | Google OAuth callback                |
 | GET    | `/auth/github`          | Initiate GitHub OAuth flow           |
 | GET    | `/auth/github/callback` | GitHub OAuth callback                |
+| POST   | `/auth/signup`          | Create a local account               |
+| POST   | `/auth/login `          | Login with email + password          |
 | GET    | `/auth/me`              | Returns current user from JWT cookie |
 | POST   | `/auth/logout`          | Clears the auth cookie               |
 
